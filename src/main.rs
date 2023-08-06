@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use rusqlite::{params, Connection, Result};
+use rusqlite::{Connection, Result};
 use services::{tempurature, CAN};
 
 #[macro_use]

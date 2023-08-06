@@ -1,4 +1,4 @@
-use rusqlite::{Connection, Result};
+use rusqlite::{Connection};
 
 pub fn init(conn: &Connection) {
     conn.execute(

@@ -1,7 +1,7 @@
-use rocket::http::{ContentType, Status};
+use rocket::http::{Status};
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket::State;
-use tracing::{span, Level};
+
 
 #[post("/update")]
 pub fn update() -> &'static str {
