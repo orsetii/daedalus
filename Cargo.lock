@@ -159,6 +159,7 @@ version = "0.1.0"
 dependencies = [
  "rocket",
  "rusqlite",
+ "serde",
  "tracing",
  "tracing-subscriber",
  "uuid",
@@ -934,6 +935,7 @@ dependencies = [
  "rocket_codegen",
  "rocket_http",
  "serde",
+ "serde_json",
  "state",
  "tempfile",
  "time",

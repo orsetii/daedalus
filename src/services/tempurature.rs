@@ -1,42 +1,12 @@
-use rocket::http::{Status};
+use rocket::http::{ContentType, Status};
 use rocket::request::{FromRequest, Outcome, Request};
+use rocket::serde::{json::Json, Deserialize};
 use rocket::State;
 
-
-#[post("/update")]
-pub fn update() -> &'static str {
-    return "CAN message receieved";
-}
-
-#[get("/")]
-pub fn index(db: &State<crate::DbConn>) -> RawTempuratureInfoJson {
-    // TODO Retrieve from database, and insert.
-    let a: f64 = db
-        .lock()
-        .unwrap()
-        .query_row(
-            "SELECT temp from TempuratureRecords order by id desc limit 1;",
-            [],
-            |row| row.get(0),
-        )
-        .unwrap();
-    debug!("Retreieved latest temp value from db: {:?}", a);
-    let json = format!("{{ \"temp\": \"{}\" }}", a);
-    RawTempuratureInfoJson(json)
-}
-
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for TempuratureInfo<'r> {
-    type Error = TempuratureInfoError;
-
-    async fn from_request(_req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        Outcome::Failure((Status::BadRequest, TempuratureInfoError::InvalidField))
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-struct TempuratureInfo<'r> {
-    pub _id: &'r uuid::Uuid,
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct TempuratureInfo {
+    pub tempurature: f64,
 }
 
 #[derive(Responder)]
@@ -44,6 +14,47 @@ struct TempuratureInfo<'r> {
 pub struct RawTempuratureInfoJson(String);
 
 #[derive(Debug)]
-enum TempuratureInfoError {
+pub enum TempuratureInfoError {
     InvalidField,
+}
+
+#[post("/update", data = "<data>")]
+pub fn update(db: &State<crate::DbConn>, data: Json<TempuratureInfo>) -> String {
+    save_tempurature_record(&data, db);
+    format!(
+        "Saved tempurature record  {}",
+        db.lock()
+            .expect("unable to get lock on db")
+            .last_insert_rowid()
+    )
+}
+
+#[get("/")]
+pub fn index(db: &State<crate::DbConn>) -> RawTempuratureInfoJson {
+    let result = get_most_recent_tempurature(db);
+
+    debug!("Retreieved latest temp value from db: {:?}", result);
+    let json = format!("{{ \"temp\": \"{}\" }}", result);
+    RawTempuratureInfoJson(json)
+}
+
+fn get_most_recent_tempurature(db: &State<crate::DbConn>) -> f64 {
+    db.lock()
+        .unwrap()
+        .query_row(
+            "SELECT temp from TempuratureRecords order by id desc limit 1;",
+            [],
+            |row| row.get(0),
+        )
+        .expect("unable to find tempurature record")
+}
+
+fn save_tempurature_record(temp_info: &TempuratureInfo, db: &State<crate::DbConn>) {
+    db.lock()
+        .expect("unable to get db lock")
+        .execute(
+            "INSERT INTO TempuratureRecords(temp) VALUES (?1)",
+            [temp_info.tempurature],
+        )
+        .expect("unable to insert tempurature record");
 }
