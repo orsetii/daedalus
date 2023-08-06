@@ -1,5 +1,6 @@
 use rocket::http::{ContentType, Status};
 use rocket::request::{FromRequest, Outcome, Request};
+use rocket::State;
 use tracing::{span, Level};
 
 #[post("/update")]
@@ -8,9 +9,20 @@ pub fn update() -> &'static str {
 }
 
 #[get("/")]
-pub fn index() -> RawTempuratureInfoJson {
+pub fn index(db: &State<crate::DbConn>) -> RawTempuratureInfoJson {
     // TODO Retrieve from database, and insert.
-    RawTempuratureInfoJson("{ \"hi\": \"world\" }")
+    let a: f64 = db
+        .lock()
+        .unwrap()
+        .query_row(
+            "SELECT temp from TempuratureRecords order by id desc limit 1;",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    debug!("Retreieved latest temp value from db: {:?}", a);
+    let json = format!("{{ \"temp\": \"{}\" }}", a);
+    RawTempuratureInfoJson(json)
 }
 
 #[rocket::async_trait]
@@ -29,7 +41,7 @@ struct TempuratureInfo<'r> {
 
 #[derive(Responder)]
 #[response(status = 200, content_type = "json")]
-pub struct RawTempuratureInfoJson(&'static str);
+pub struct RawTempuratureInfoJson(String);
 
 #[derive(Debug)]
 enum TempuratureInfoError {
