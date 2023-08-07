@@ -1,8 +1,26 @@
-use rocket::State;
+//! This is the module for storing and managing documentation and various documents of the
+//! Icarus project.
+//!
+//! Note that documentation is stored both on the file system, and in the database.
+use rocket::{
+    response::{self, content, status, Result},
+    State,
+};
+use uuid::Uuid;
+
+mod fs;
 
 #[get("/<id>")]
-pub fn get_by_id(db: &State<crate::DbConn>, id: &str) {
+pub fn get_by_id(
+    db: &State<crate::DbConn>,
+    id: &str,
+) -> status::Custom<response::content::RawJson<String>> {
     // TODO retreive page via id from database
+    let doc = fs::get_by_id(Uuid::parse_str(id).unwrap());
+    status::Custom(
+        rocket::http::Status::Ok,
+        content::RawJson(serde_json::to_string(&doc).unwrap()),
+    )
 }
 
 #[post("/<id>")]

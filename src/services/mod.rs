@@ -3,7 +3,7 @@ pub mod docs;
 pub mod hive;
 pub mod location;
 pub mod media;
-pub mod tempurature;
+pub mod temperature;
 pub mod visualisation;
 pub mod weather;
 
