@@ -2,8 +2,11 @@
 //! Icarus project.
 //!
 //! Note that documentation is stored both on the file system, and in the database.
+#![allow(dead_code)]
+#![allow(unused_variables)]
+
 use rocket::{
-    response::{self, content, status, Result},
+    response::{self, content, status},
     State,
 };
 use uuid::Uuid;

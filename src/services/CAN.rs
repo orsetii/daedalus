@@ -38,7 +38,7 @@ pub fn post() -> &'static str {
 
 #[get("/latest/<cnt>")]
 pub fn get_latest(
-    db: &State<crate::DbConn>,
+    _db: &State<crate::DbConn>,
     cnt: usize,
 ) -> status::Custom<content::RawJson<String>> {
     // TODO retreive page via id from database
