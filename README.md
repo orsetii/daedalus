@@ -3,6 +3,7 @@ master server for the Icarus project
 
 
 ## Building for Raspberry Pi 
+*note: only works on linux*
 
 Install `cross` tool:
 ```bash
