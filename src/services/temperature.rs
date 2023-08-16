@@ -1,12 +1,11 @@
-
-
-use rocket::serde::{json::Json, Deserialize};
+use rocket::serde::{json::Json, Deserialize, Serialize};
 use rocket::State;
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
-pub struct TempuratureInfo {
-    pub tempurature: f64,
+pub struct TemperatureInfo {
+    pub temperature: f64,
+    pub humidity: f64,
 }
 
 #[derive(Responder)]
@@ -19,7 +18,7 @@ pub enum TempuratureInfoError {
 }
 
 #[post("/update", data = "<data>")]
-pub fn update(db: &State<crate::DbConn>, data: Json<TempuratureInfo>) -> String {
+pub fn update(db: &State<crate::DbConn>, data: Json<TemperatureInfo>) -> String {
     save_tempurature_record(&data, db);
     format!(
         "Saved tempurature record  {}",
@@ -29,16 +28,36 @@ pub fn update(db: &State<crate::DbConn>, data: Json<TempuratureInfo>) -> String 
     )
 }
 
-#[get("/")]
-pub fn index(db: &State<crate::DbConn>) -> RawTempuratureInfoJson {
-    let result = get_most_recent_tempurature(db);
-
-    debug!("Retreieved latest temp value from db: {:?}", result);
-    let json = format!("{{ \"temp\": \"{}\" }}", result);
-    RawTempuratureInfoJson(json)
+#[post("/internal", data = "<data>")]
+pub fn internal_post(db: &State<crate::DbConn>, data: Json<TemperatureInfo>) {
+    save_tempurature_record(&data.into_inner(), db);
 }
 
-fn get_most_recent_tempurature(db: &State<crate::DbConn>) -> f64 {
+#[post("/external", data = "<data>")]
+pub fn external_post(db: &State<crate::DbConn>, data: Json<TemperatureInfo>) {
+    save_tempurature_record(&data.into_inner(), db);
+}
+
+#[get("/internal")]
+pub fn internal_get(db: &State<crate::DbConn>) -> RawTempuratureInfoJson {
+    
+    let latest = get_temperature_records(db, 1)[0];
+    RawTempuratureInfoJson(serde_json::to_string(&latest).unwrap())
+}
+
+#[get("/external")]
+pub fn external_get(db: &State<crate::DbConn>) -> RawTempuratureInfoJson {
+    let latest = get_temperature_records(db, 1)[0];
+    RawTempuratureInfoJson(serde_json::to_string(&latest).unwrap())
+}
+
+#[get("/both")]
+pub fn both_get(db: &State<crate::DbConn>) -> RawTempuratureInfoJson {
+    let latest = get_temperature_records(db, 1)[0];
+    RawTempuratureInfoJson(serde_json::to_string(&latest).unwrap())
+}
+
+fn get_most_recent_temperature(db: &State<crate::DbConn>) -> f64 {
     db.lock()
         .unwrap()
         .query_row(
@@ -49,12 +68,36 @@ fn get_most_recent_tempurature(db: &State<crate::DbConn>) -> f64 {
         .expect("unable to find tempurature record")
 }
 
-fn save_tempurature_record(temp_info: &TempuratureInfo, db: &State<crate::DbConn>) {
+fn save_tempurature_record(temp_info: &TemperatureInfo, db: &State<crate::DbConn>) {
     db.lock()
         .expect("unable to get db lock")
         .execute(
-            "INSERT INTO TempuratureRecords(temp) VALUES (?1)",
-            [temp_info.tempurature],
+            "INSERT INTO TempuratureRecords(temp, humidity) VALUES (?1, ?2)",
+            [temp_info.temperature, temp_info.humidity],
         )
-        .expect("unable to insert tempurature record");
+        .expect("unable to insert temperature record");
+}
+
+
+fn get_temperature_records(db: &State<crate::DbConn>, rows_to_get: usize) -> Vec<TemperatureInfo> {
+    let binding = db.lock().expect("unable to get db lock");
+    let mut stmt = binding
+        .prepare("SELECT temp, humidity from TempuratureRecords ORDER BY id DESC LIMIT ?1;")
+        .expect("unable to prepare statement");
+
+    let rows = stmt
+        .query_map([rows_to_get], |row| {
+            Ok(TemperatureInfo {
+                temperature: row.get(0)?,
+                humidity: row.get(1)?,
+            })
+        })
+        .expect("unable to query map");
+
+    let mut results = vec![];
+    for row in rows {
+        results.push(row.expect("unable to get row"));
+    }
+
+    results
 }

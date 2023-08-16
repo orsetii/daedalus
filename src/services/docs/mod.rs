@@ -19,7 +19,7 @@ pub fn get_by_id(
     id: &str,
 ) -> status::Custom<response::content::RawJson<String>> {
     // TODO retreive page via id from database
-    let doc = fs::get_by_id(Uuid::parse_str(id).unwrap());
+    let doc = fs::get_doc(id).unwrap();
     status::Custom(
         rocket::http::Status::Ok,
         content::RawJson(serde_json::to_string(&doc).unwrap()),

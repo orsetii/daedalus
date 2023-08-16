@@ -20,21 +20,28 @@ type DbConn = Mutex<Connection>;
 async fn main() -> Result<(), rocket::Error> {
     tracing_subscriber::fmt().init();
 
+    let conn = Connection::open_in_memory().expect("in memory db");
+    db::init(&conn);
+
     let config = Config {
         doc_root_path: String::from("/"),
     };
 
-    let conn = Connection::open_in_memory().expect("in memory db");
-    db::init(&conn);
+    let swarm = services::hive::Swarm::new();
+
+
+    println!();
+
 
     let _rocket = rocket::build()
         .manage(Mutex::new(conn))
         .manage(config)
+        .manage(Mutex::new(swarm))
         .mount("/hello", routes![index])
         .mount("/CAN", routes![CAN::post, CAN::get_latest])
         .mount(
             "/temperature",
-            routes![temperature::update, temperature::index],
+            routes![temperature::update, temperature::internal_get, temperature::external_get, temperature::both_get, temperature::internal_post, temperature::external_post],
         )
         .mount(
             "/docs",
@@ -47,6 +54,8 @@ async fn main() -> Result<(), rocket::Error> {
                 docs::get_index
             ],
         )
+        .mount("/hive", routes![services::hive::register, services::hive::index])
+        .mount("/time", routes![services::time::time, services::time::time_no_seconds, services::time::current_date, services::time::timezone])
         .attach(cors::CORS)
         .launch()
         .await?;
