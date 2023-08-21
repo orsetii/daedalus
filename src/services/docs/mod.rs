@@ -9,7 +9,6 @@ use rocket::{
     response::{self, content, status},
     State,
 };
-use uuid::Uuid;
 
 mod fs;
 
@@ -19,7 +18,7 @@ pub fn get_by_id(
     id: &str,
 ) -> status::Custom<response::content::RawJson<String>> {
     // TODO retreive page via id from database
-    let doc = fs::get_doc(id).unwrap();
+    let doc = fs::get_doc_by_id(id).unwrap();
     status::Custom(
         rocket::http::Status::Ok,
         content::RawJson(serde_json::to_string(&doc).unwrap()),
@@ -53,3 +52,27 @@ pub fn archive(db: &State<crate::DbConn>, id: &str) {
 pub fn delete(db: &State<crate::DbConn>, id: &str) {
     // TODO require input from Json with various metadata and the page content itself.
 }
+
+
+// function that is a rocket endpoint, that takes a title, uses get_doc_by_title to find a matching document
+#[get("/search/title/<title>")]
+pub fn search_by_title(title: &str) -> status::Custom<content::RawJson<String>> {
+    let docs = fs::get_docs_by_title(title);
+    status::Custom(
+        rocket::http::Status::Ok,
+        content::RawJson(serde_json::to_string(&docs).unwrap()),
+    )
+}
+
+// function that is a rocket endpoint, returns the most recently changed documents, from the filesystem, use other functions defined in this file
+#[get("/recent/<n>")]
+pub fn get_recent(n: &str) -> status::Custom<content::RawJson<String>> {
+    let docs = fs::get_recent_docs(n.parse::<usize>().unwrap());
+    status::Custom(
+        rocket::http::Status::Ok,
+        content::RawJson(serde_json::to_string(&docs).unwrap()),
+    )
+}
+
+
+

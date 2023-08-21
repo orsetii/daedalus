@@ -51,7 +51,9 @@ async fn main() -> Result<(), rocket::Error> {
                 docs::archive,
                 docs::update_by_id,
                 docs::create,
-                docs::get_index
+                docs::get_index,
+                docs::search_by_title,
+                docs::get_recent
             ],
         )
         .mount("/hive", routes![services::hive::register, services::hive::index])
