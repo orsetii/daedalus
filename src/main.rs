@@ -41,7 +41,7 @@ async fn main() -> Result<(), rocket::Error> {
         .mount("/CAN", routes![CAN::post, CAN::get_latest])
         .mount(
             "/temperature",
-            routes![temperature::update, temperature::internal_get, temperature::external_get, temperature::both_get, temperature::internal_post, temperature::external_post],
+            routes![temperature::update, temperature::internal_get, temperature::external_get, temperature::both_get, temperature::internal_post, temperature::external_post, temperature::internal_get_many, temperature::external_get_many],
         )
         .mount(
             "/docs",
