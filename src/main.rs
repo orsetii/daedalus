@@ -46,14 +46,14 @@ async fn main() -> Result<(), rocket::Error> {
         .mount(
             "/docs",
             routes![
-                docs::get_by_id,
                 docs::delete,
                 docs::archive,
                 docs::update_by_id,
                 docs::create,
                 docs::get_index,
                 docs::search_by_title,
-                docs::get_recent
+                docs::get_by_title,
+                docs::get_recent,
             ],
         )
         .mount("/hive", routes![services::hive::register, services::hive::index])

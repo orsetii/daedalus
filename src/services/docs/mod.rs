@@ -11,20 +11,6 @@ use rocket::{
 };
 
 mod fs;
-
-#[get("/<id>")]
-pub fn get_by_id(
-    db: &State<crate::DbConn>,
-    id: &str,
-) -> status::Custom<response::content::RawJson<String>> {
-    // TODO retreive page via id from database
-    let doc = fs::get_doc_by_id(id).unwrap();
-    status::Custom(
-        rocket::http::Status::Ok,
-        content::RawJson(serde_json::to_string(&doc).unwrap()),
-    )
-}
-
 #[post("/<id>")]
 pub fn update_by_id(db: &State<crate::DbConn>, id: &str) {
     // TODO update the page here
@@ -53,6 +39,14 @@ pub fn delete(db: &State<crate::DbConn>, id: &str) {
     // TODO require input from Json with various metadata and the page content itself.
 }
 
+#[get("/title/<title>")]
+pub fn get_by_title(title: &str) -> status::Custom<content::RawJson<String>> {
+    let doc = fs::get_docs_by_title(title);
+    status::Custom(
+        rocket::http::Status::Ok,
+        content::RawJson(serde_json::to_string(&doc.first()).unwrap()),
+    )
+}
 
 // function that is a rocket endpoint, that takes a title, uses get_doc_by_title to find a matching document
 #[get("/search/title/<title>")]

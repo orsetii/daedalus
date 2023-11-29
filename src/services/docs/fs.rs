@@ -4,22 +4,22 @@
 
 use std::time::SystemTime;
 
-use rocket::serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use lazy_static::lazy_static;
+use rocket::{
+    form::validate::Contains,
+    serde::{Deserialize, Serialize},
+};
+use uuid::Uuid;
 
 lazy_static! {
-    static ref DOCS_FOLDER: String = String::from(env!("CARGO_MANIFEST_DIR").to_string()  + "/docs");
+    static ref DOCS_FOLDER: String = String::from(env!("CARGO_MANIFEST_DIR").to_string() + "/docs");
 }
-
-
 
 #[derive(Deserialize, Serialize)]
 pub struct Content(String);
 
 #[derive(Deserialize, Serialize)]
 pub struct Doc {
-    pub id: String,
     pub title: String,
     pub content: Content,
     pub modified_at: SystemTime,
@@ -28,39 +28,36 @@ pub struct Doc {
 impl Doc {
     pub fn new(name: &str, content: &str) -> Self {
         Self {
-            id: Uuid::new_v4().to_string(),
             title: String::from(name),
             content: Content(String::from(content)),
-            modified_at: SystemTime::UNIX_EPOCH
+            modified_at: SystemTime::UNIX_EPOCH,
         }
     }
 
     pub fn from_file(path_raw: &str) -> std::io::Result<Self> {
-    let path = std::path::Path::new(&*DOCS_FOLDER).join(path_raw);
-    warn!("path: {:?}", path);
-    let content = &std::fs::read_to_string(path.clone())?;
+        let path = std::path::Path::new(&*DOCS_FOLDER).join(path_raw);
+        warn!("path: {:?}", path);
 
-    let mut lines = content.lines();
-    let first_line = lines.next().unwrap();
-    let id = first_line.split("=").last().unwrap();
-    let content = lines.collect::<Vec<&str>>().join("\n");
+        let modified_at = std::fs::metadata(path.clone())?.modified().unwrap();
+        let content = &std::fs::read_to_string(path.clone())?;
 
-    let modified_at = std::fs::metadata(path)?.modified().unwrap();
+        Ok(Self {
+            title: String::from(&get_file_name_from_path(path_raw)),
+            content: if content.len() != 0 {
+                let mut lines = content.lines();
+                let first_line = lines.next().unwrap();
+                let content = lines.collect::<Vec<&str>>().join("\n");
 
-    Ok(Self {
-                id: String::from(id),
-                title: String::from(&get_file_name_from_path(path_raw)),
-                content: Content(content),
-                modified_at,
-            })
-   
-
+                Content(content)
+            } else {
+                Content(String::new())
+            },
+            modified_at,
+        })
     }
 }
 
-
 pub fn get_doc(doc_path: &str) -> std::io::Result<Doc> {
-
     let path = std::path::Path::new(&*DOCS_FOLDER).join(doc_path);
     warn!("path: {:?}", path);
     let content = &std::fs::read_to_string(path)?;
@@ -75,18 +72,6 @@ fn get_file_name_from_path(path: &str) -> String {
     }
     let final_name = parts.last().unwrap();
     String::from(final_name)
-}
-
-
-// a function that searches a vector of docs for a doc with a matching id
-pub fn get_doc_by_id(id: &str) -> Option<Doc> {
-    let docs = get_all_docs();
-    for doc in docs {
-        if doc.id == id {
-            return Some(doc);
-        }
-    }
-    None
 }
 
 // a function that searches a vector of docs for any that contain a string in their title
@@ -112,13 +97,12 @@ pub fn get_doc_by_content(content: &str) -> Option<Doc> {
     None
 }
 
-
 pub fn get_all_docs() -> Vec<Doc> {
     let mut docs = Vec::new();
     let paths = std::fs::read_dir(&*DOCS_FOLDER).unwrap();
     for path in paths {
         let path = path.unwrap().path();
-        if path.is_dir() {
+        if path.is_dir() && path.ends_with(".md") {
             let sub_paths = std::fs::read_dir(path).unwrap();
             for sub_path in sub_paths {
                 let sub_path = sub_path.unwrap().path();
@@ -142,7 +126,6 @@ pub fn get_recent_docs(n: usize) -> Vec<Doc> {
     docs
 }
 
-
 // write a test for get_doc to ensure it returns the correct doc
 #[cfg(test)]
 mod tests {
@@ -160,4 +143,4 @@ mod tests {
         let name = get_file_name_from_path("test.md");
         assert_eq!(name, "test.md");
     }
-}   
+}
